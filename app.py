@@ -56,7 +56,8 @@ def init_db():
     conn.commit()
     conn.close()
 
-init_db()
+with app.app_context():
+    init_db()
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
