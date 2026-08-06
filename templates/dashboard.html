@@ -2,69 +2,36 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Manager Dashboard</title>
+    <title>Manager Dashboard - Pro WMS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Font chữ hiện đại từ Google */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        
-        body { 
-            font-family: 'Inter', sans-serif;
-            background: url('/static/congty.jpg') no-repeat center center fixed;
-            background-size: cover;
-        }
-
-        /* Lớp phủ (Overlay) làm dịu ảnh nền */
-        .bg-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(240, 242, 245, 0.7);
-            z-index: -1;
-        }
-
-        /* HIỆU ỨNG KÍNH MỜ (GLASSMORPHISM) */
-        .card {
-            background: rgba(255, 255, 255, 0.85) !important;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.6) !important;
-            border-radius: 16px !important;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08) !important;
-            transition: all 0.3s ease;
-        }
-        
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15) !important;
-        }
-
-        .card-header {
-            border-top-left-radius: 16px !important;
-            border-top-right-radius: 16px !important;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-        }
-
+        body { font-family: 'Inter', sans-serif; background: url('/static/congty.jpg') no-repeat center center fixed; background-size: cover; }
+        .bg-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(240, 242, 245, 0.7); z-index: -1; }
+        .card { background: rgba(255, 255, 255, 0.9) !important; backdrop-filter: blur(10px); border-radius: 12px !important; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .card-header { border-top-left-radius: 12px !important; border-top-right-radius: 12px !important; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #adb5bd; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6c757d; }
-
-        /* CSS Sơ đồ Heatmap */
-        .warehouse-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;}
-        .zone { padding: 15px 10px; text-align: center; border-radius: 12px; font-weight: bold; border: 2px solid rgba(255,255,255,0.5); transition: 0.3s;}
-        .heat-high { background-color: rgba(255, 77, 77, 0.9); color: white; border-color: #cc0000; }
-        .heat-med { background-color: rgba(255, 204, 0, 0.9); color: #333; border-color: #cca300; }
-        .heat-low { background-color: rgba(212, 237, 218, 0.9); color: #155724; border-color: #c3e6cb; }
-        .heat-none { background-color: rgba(248, 249, 250, 0.6); color: #6c757d; }
+        
+        .map-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .zone-card { border: 2px solid #ccc; border-radius: 8px; padding: 10px; background: rgba(255,255,255,0.9); }
+        .zone-title { font-weight: bold; text-align: center; margin-bottom: 8px; background: #343a40; color: white; border-radius: 4px; padding: 5px; }
+        .row-group { margin-bottom: 5px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+        .shelf-row { display: flex; align-items: center; margin-bottom: 4px; }
+        .shelf-label { width: 55px; font-size: 0.75rem; font-weight: bold; color: #555; }
+        .slots-container { display: flex; gap: 4px; flex-wrap: wrap; }
+        .slot-box { width: 18px; height: 18px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s; }
+        .slot-box:hover { transform: scale(1.5); z-index: 10; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+        .slot-occupied { background-color: #dc3545; border-color: #b02a37; } 
+        .slot-empty { background-color: #28a745; border-color: #198754; }
     </style>
 </head>
 <body class="pb-5">
-    
-    <!-- Lớp phủ mờ nền -->
     <div class="bg-overlay"></div>
 
-    <!-- Navbar -->
+    <!-- NAVBAR FULL TÍNH NĂNG NHƯ CŨ -->
     <nav class="navbar navbar-dark bg-dark mb-4 shadow">
         <div class="container-fluid">
             <span class="navbar-brand mb-0 h1 d-flex align-items-center">
@@ -79,70 +46,45 @@
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container-fluid px-4">
         <div class="row">
-            <!-- CỘT 1: GIAO VIỆC, HEATMAP & NHÂN SỰ -->
-            <div class="col-md-4 mb-4">
+            
+            <!-- CỘT TRÁI: COMMAND CENTER (Giao việc, Biểu đồ, Quản lý User) -->
+            <div class="col-lg-3 mb-4">
                 
-                <!-- Giao việc chi tiết (Đã nâng cấp form) -->
                 <div class="card shadow mb-4">
-                    <div class="card-header bg-primary text-white fw-bold">📝 Tạo lệnh xuất/nhập chi tiết</div>
+                    <div class="card-header bg-primary text-white fw-bold">📝 Tạo lệnh xuất/nhập</div>
                     <div class="card-body">
                         <form method="POST">
                             <div class="row g-2">
                                 <div class="col-6">
-                                    <label class="form-label small mb-1">Mã NV:</label>
-                                    <input type="number" name="worker_id" required value="1" class="form-control form-control-sm">
-                                </div>
+    <input type="text" name="worker_id" value="Cont-322" class="form-control form-control-sm" title="Mã Lệnh / Cont">
+</div>
                                 <div class="col-6">
-                                    <label class="form-label small mb-1">Loại lệnh:</label>
                                     <select name="task_type" class="form-select form-select-sm">
-                                        <option value="Xuất">📦 Xuất kho</option>
-                                        <option value="Nhập">📥 Nhập kho</option>
+                                        <option value="Xuất">Xuất Kho</option>
+                                        <option value="Nhập">Nhập Kho</option>
                                     </select>
                                 </div>
-                                <div class="col-12">
-                                    <label class="form-label small mb-1">Mã hàng hóa:</label>
-                                    <input type="text" name="item_code" required placeholder="VD: SP-GHEGO-1" class="form-control form-control-sm">
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label small mb-1">Số lượng cần quét:</label>
-                                    <input type="number" name="quantity" required value="1" min="1" class="form-control form-control-sm">
-                                </div>
-                                <div class="col-12 mt-3">
-                                    <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Gửi lệnh xuống PDA</button>
-                                </div>
+                                <div class="col-12"><input type="text" name="item_code" required placeholder="Mã Hàng (VD: SP-1)" class="form-control form-control-sm"></div>
+                                <div class="col-12"><input type="number" name="quantity" required value="1" min="1" class="form-control form-control-sm" title="Số lượng"></div>
+                                <div class="col-12 mt-2"><button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Gửi lệnh xuống PDA</button></div>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <!-- SƠ ĐỒ KHO (HEATMAP) -->
                 <div class="card shadow mb-4">
-                    <div class="card-header bg-danger text-white fw-bold">🔥 Sơ đồ Kho (Heatmap)</div>
-                    <div class="card-body">
-                        <div class="warehouse-grid">
-                            {% set zones = ['Khu A', 'Khu B', 'Khu C', 'Khu D'] %}
-                            {% for z in zones %}
-                                {% set qty = heatmap_data.get(z, 0) %}
-                                {% if qty >= 40 %}{% set h_class = 'heat-high' %}
-                                {% elif qty >= 10 %}{% set h_class = 'heat-med' %}
-                                {% elif qty > 0 %}{% set h_class = 'heat-low' %}
-                                {% else %}{% set h_class = 'heat-none' %}{% endif %}
-                                <div class="zone {{ h_class }}">
-                                    <h5>{{ z }}</h5>
-                                    <span class="badge bg-dark">{{ qty }} SP</span>
-                                </div>
-                            {% endfor %}
+                    <div class="card-header bg-white fw-bold">📊 Tiến độ</div>
+                    <div class="card-body d-flex align-items-center justify-content-center py-2">
+                        <div style="width: 140px;">
+                            <canvas id="progressChart"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <!-- Quản trị Nhân sự -->
                 <div class="card shadow">
-                    <div class="card-header bg-secondary text-white fw-bold d-flex justify-content-between align-items-center">
-                        <span>👥 Quản trị Nhân sự</span>
-                    </div>
+                    <div class="card-header bg-secondary text-white fw-bold">👥 Quản trị Nhân sự</div>
                     <div class="card-body p-2">
                         <form method="POST" action="/admin/add_user" class="row g-1 mb-2 border-bottom pb-2">
                             <div class="col-12"><input type="text" name="username" class="form-control form-control-sm" required placeholder="Tên đăng nhập"></div>
@@ -158,7 +100,7 @@
                         <div style="max-height: 150px; overflow-y: auto;">
                             <ul class="list-group list-group-flush">
                                 {% for user in users %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center p-1 bg-transparent">
+                                <li class="list-group-item d-flex justify-content-between align-items-center p-1 bg-transparent border-0 border-bottom">
                                     <span class="small fw-bold">
                                         {{ user[1] }} ({{ user[2] }})
                                         {% if user[3] == 0 %}<del class="text-danger">Đã khóa</del>{% endif %}
@@ -175,36 +117,81 @@
 
             </div>
 
-            <!-- CỘT 2: QUẢN LÝ TỒN KHO & BIỂU ĐỒ -->
-            <div class="col-md-8 mb-4">
+            <!-- CỘT PHẢI: MONITORING (Bản đồ, Tồn Kho, Lịch Sử) -->
+            <div class="col-lg-9 mb-4">
                 
-                <div class="row">
-                    <div class="col-md-8">
-                        <!-- Tồn Kho -->
-                        <div class="card shadow mb-4 h-100">
-                            <div class="card-header bg-warning fw-bold d-flex justify-content-between align-items-center">
-                                <span>📦 Danh mục Tồn Kho</span>
+                <div class="card shadow mb-4">
+                    <div class="card-header bg-dark text-white fw-bold">🗺️ Bản đồ Kho (160 vị trí) - Trực quan hóa tiến độ lưu trữ</div>
+                    <div class="card-body p-2 bg-light">
+                        <div class="map-container">
+                            {% for zone, rows in map_data.items() %}
+                            <div class="zone-card shadow-sm">
+                                <!-- Đã thêm đếm số lượng vị trí đang dùng (VD: 5/40) -->
+                                <div class="zone-title d-flex justify-content-between align-items-center">
+                                    <span>Khu {{ zone }}</span>
+                                    <span class="badge bg-light text-dark fs-6">{{ zone_stats.get(zone, 0) }} / 40</span>
+                                </div>
+                                {% for r, shelves in rows.items() %}
+                                <div class="row-group">
+                                    <div class="small fw-bold text-primary mb-1">Hàng {{ r }}</div>
+                                    {% for s, slots in shelves.items() %}
+                                    <div class="shelf-row">
+                                        <div class="shelf-label">Kệ {{ s }}</div>
+                                        <div class="slots-container">
+                                            {% for slot in slots|sort(attribute='pos') %}
+                                                <div class="slot-box {% if slot.item %}slot-occupied{% else %}slot-empty{% endif %}" 
+                                                     title="Vị trí: {{ slot.code }}&#10;Trạng thái: {% if slot.item %}{{ slot.item }}{% else %}Trống{% endif %}"
+                                                     onclick="showQRCode('{{ slot.code }}', '📍 TỌA ĐỘ VỊ TRÍ KHO')">
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endfor %}
                             </div>
+                            {% endfor %}
+                        </div>
+                        <div class="d-flex gap-3 mt-3 justify-content-center small fw-bold">
+                            <div><span class="d-inline-block slot-box slot-occupied align-middle me-1"></span> Có hàng</div>
+                            <div><span class="d-inline-block slot-box slot-empty align-middle me-1"></span> Trống</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Bảng Tồn Kho -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow h-100">
+                            <div class="card-header bg-warning fw-bold">📦 Tồn kho & Cảnh báo</div>
                             <div class="card-body p-2">
-                                <form method="POST" action="/inventory/manage" class="row g-2 mb-3">
-                                    <div class="col-3"><input type="text" name="item_code" class="form-control form-control-sm" required placeholder="Mã (SP-1)"></div>
-                                    <div class="col-3"><input type="text" name="item_name" class="form-control form-control-sm" required placeholder="Tên SP"></div>
-                                    <div class="col-2"><input type="number" name="quantity" class="form-control form-control-sm" required placeholder="SL"></div>
-                                    <div class="col-2"><input type="text" name="location" class="form-control form-control-sm" required placeholder="Vị trí"></div>
-                                    <div class="col-2"><button type="submit" class="btn btn-sm btn-warning w-100">Lưu</button></div>
+                                <form method="POST" action="/inventory/manage" class="row g-2 mb-2 border-bottom pb-2">
+                                    <div class="col-4"><input type="text" name="item_code" class="form-control form-control-sm" required placeholder="Mã SP"></div>
+                                    <div class="col-5"><input type="text" name="item_name" class="form-control form-control-sm" required placeholder="Tên SP"></div>
+                                    <div class="col-3"><button type="submit" class="btn btn-sm btn-dark w-100">Tạo SP</button></div>
                                 </form>
-                                <div style="max-height: 250px; overflow-y: auto;">
-                                    <table class="table table-sm table-striped">
-                                        <thead class="table-dark" style="position: sticky; top: 0;">
-                                            <tr><th>Mã SP</th><th>Tên SP</th><th>Vị trí</th><th>Tồn kho</th></tr>
+                                <div style="max-height: 200px; overflow-y: auto;">
+                                    <table class="table table-sm text-center align-middle">
+                                        <thead class="table-dark sticky-top">
+                                            <tr><th>Mã SP</th><th>Tên SP</th><th>Tồn kho</th><th>Cảnh báo</th><th>QR</th></tr>
                                         </thead>
                                         <tbody>
                                             {% for inv in inventories %}
-                                            <tr>
-                                                <td class="fw-bold">{{ inv[1] }}</td>
+                                            {% set qty = inv[3] %}
+                                            <tr class="{% if qty <= 1 %}table-danger{% elif qty <= 5 %}table-warning{% else %}table-success{% endif %} fw-bold">
+                                                <td>{{ inv[1] }}</td>
                                                 <td>{{ inv[2] }}</td>
-                                                <td><small class="text-muted">{{ inv[4] }}</small></td>
-                                                <td><span class="badge bg-info text-dark fs-6">{{ inv[3] }}</span></td>
+                                                <td class="fs-6">{{ qty }}</td>
+                                                <td>
+                                                    {% if qty <= 1 %}
+                                                        <span class="badge bg-danger">🔴 RẤT ÍT</span>
+                                                    {% elif qty <= 5 %}
+                                                        <span class="badge bg-warning text-dark">🟡 SẮP HẾT</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">🟢 BÌNH THƯỜNG</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td><button type="button" class="btn btn-sm btn-outline-dark py-0 px-2" style="font-size:0.75rem;" onclick="showQRCode('{{ inv[1] }}', '{{ inv[2] }}')">📱</button></td>
                                             </tr>
                                             {% endfor %}
                                         </tbody>
@@ -213,53 +200,34 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="col-md-4">
-                        <!-- Biểu đồ -->
-                        <div class="card shadow mb-4 h-100">
-                            <div class="card-header bg-white fw-bold">📊 Tiến độ</div>
-                            <div class="card-body d-flex align-items-center justify-content-center">
-                                <div style="width: 150px;">
-                                    <canvas id="progressChart"></canvas>
-                                </div>
+
+                    <!-- Bảng Lịch sử -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow h-100">
+                            <div class="card-header bg-white fw-bold">📜 Lịch sử Lệnh công việc</div>
+                            <div class="card-body p-0" style="max-height: 250px; overflow-y: auto;">
+                                <table class="table table-striped table-hover mb-0 text-center text-nowrap">
+                                    <thead class="table-dark sticky-top">
+                                        <tr><th>ID</th><th>NV</th><th>Mã Hàng</th><th>Loại</th><th>Tiến độ</th><th>Năng suất</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for task in tasks %}
+                                        <tr>
+                                            <td>#{{ task.id }}</td>
+                                            <td>W{{ task.worker_id }}</td>
+                                            <td class="fw-bold text-primary">{{ task.item_code }}</td>
+                                            <td>
+                                                {% if task.task_type == 'Xuất' %}<span class="badge bg-danger">Xuất</span>
+                                                {% else %}<span class="badge bg-success">Nhập</span>{% endif %}
+                                            </td>
+                                            <td><span class="fw-bold">{{ task.scanned_qty }}</span> / {{ task.quantity }}</td>
+                                            <td><small class="text-muted fw-bold">{{ task.duration }}</small></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Bảng Lịch sử Lệnh công việc (Đã thêm cột Loại Lệnh và Số lượng) -->
-                <div class="card shadow">
-                    <div class="card-header bg-white fw-bold">📜 Lịch sử Lệnh công việc</div>
-                    <div class="card-body p-0">
-                        <table class="table table-striped table-hover mb-0 text-center">
-                            <thead class="table-dark">
-                                <tr><th>ID</th><th>Mã NV</th><th>Mã Hàng</th><th>Loại</th><th>Tiến độ quét</th><th>Trạng thái</th></tr>
-                            </thead>
-                            <tbody>
-                                {% for task in tasks %}
-                                <tr>
-                                    <td>#{{ task[0] }}</td>
-                                    <td>Worker {{ task[1] }}</td>
-                                    <td class="fw-bold text-primary">{{ task[2] }}</td>
-                                    <td>
-                                        {% if task[5] == 'Xuất' %}
-                                        <span class="badge bg-danger">Xuất</span>
-                                        {% else %}
-                                        <span class="badge bg-success">Nhập</span>
-                                        {% endif %}
-                                    </td>
-                                    <td><span class="fw-bold">{{ task[4] }}</span> / {{ task[3] }}</td>
-                                    <td>
-                                        {% if task[6] == 'Completed' %}
-                                        <span class="badge bg-success">Đã xong</span>
-                                        {% else %}
-                                        <span class="badge bg-warning text-dark">Chờ xử lý</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
 
@@ -267,6 +235,18 @@
         </div>
     </div>
 
+    <!-- MODAL HIỂN THỊ MÃ QR -->
+    <div class="modal fade" id="qrModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content text-center p-3">
+                <h5 class="modal-title mb-2 fs-6 fw-bold" id="qrTitle"></h5>
+                <div id="qrImageContainer" class="my-2"></div>
+                <button type="button" class="btn btn-secondary btn-sm w-100" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const ctx = document.getElementById('progressChart');
         new Chart(ctx, {
@@ -276,6 +256,28 @@
                 datasets: [{
                     data: [{{ completed }}, {{ pending }}],
                     backgroundColor: ['#28a745', '#ffc107']
+                }]
+            }
+        });
+
+        function showQRCode(code, name) {
+            document.getElementById('qrTitle').innerText = name;
+            let qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(code);
+            document.getElementById('qrImageContainer').innerHTML = '<img src="' + qrUrl + '" class="img-fluid rounded shadow-sm border p-1">';
+            new bootstrap.Modal(document.getElementById('qrModal')).show();
+        }
+
+        setInterval(function() {
+            let isTyping = false;
+            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') { isTyping = true; }
+            document.querySelectorAll('input:not([type="submit"])').forEach(input => {
+                if (input.name !== 'worker_id' && input.value.trim() !== '') { isTyping = true; }
+            });
+            if (!isTyping) { window.location.reload(); }
+        }, 5000); 
+    </script>
+</body>
+</html>
                 }]
             }
         });
