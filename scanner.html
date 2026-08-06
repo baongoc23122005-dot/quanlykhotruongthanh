@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PDA Scanner</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- SweetAlert2 cho Toast Notification -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- HTML5 QRCode -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body { transition: background-color 0.3s; }
+        #reader { width: 100%; border: none !important; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        #reader video { object-fit: cover; }
+    </style>
+</head>
+<body id="body" class="bg-light pb-5">
+    
+    <nav class="navbar navbar-primary bg-primary mb-3">
+        <div class="container-fluid justify-content-center">
+            <span class="navbar-brand text-white fw-bold mb-0">HỆ THỐNG PDA</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- CHỈ DẪN VỊ TRÍ & NHIỆM VỤ -->
+        <div class="alert alert-warning text-center shadow-sm p-2 mb-3" role="alert">
+            <h6 class="text-danger fw-bold mb-1">📍 TỚI: {{ task.location }}</h6>
+            <h3 class="text-primary fw-bold mb-0" id="expectedCode">{{ task.code }}</h3>
+            <small class="text-muted">{{ task.name }}</small>
+        </div>
+
+        <!-- Camera Scanner -->
+        <div id="reader" class="bg-white mb-2"></div>
+        
+        <!-- NÚT NHẬP TAY (MANUAL ENTRY) -->
+        <button onclick="manualEntry()" class="btn btn-outline-secondary w-100 fw-bold mb-3 shadow-sm">
+            ⌨️ Mã hỏng? Nhập thủ công
+        </button>
+        
+        <!-- Kết quả quét -->
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body text-center p-2">
+                <h6 class="text-muted mb-2">Trạng thái mã quét:</h6>
+                <h5 id="result" class="mb-0 text-secondary">Đang chờ quét...</h5>
+            </div>
+        </div>
+
+        <!-- LỊCH SỬ CÁ NHÂN -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white text-muted fw-bold py-1" style="font-size: 0.8rem;">
+                🕰️ Lịch sử vừa hoàn thành
+            </div>
+            <ul class="list-group list-group-flush" style="font-size: 0.85rem;">
+                {% for h in history_tasks %}
+                <li class="list-group-item text-success fw-bold">✓ {{ h }}</li>
+                {% else %}
+                <li class="list-group-item text-muted">Chưa có lịch sử</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const expectedCode = document.getElementById("expectedCode").innerText;
+        let isProcessing = false; // Chống quét liên tục (spam)
+
+        // Web Audio API: Hàm tạo âm thanh
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playBeep(isSuccess) {
+            if (!audioCtx) return;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            if (isSuccess) {
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); 
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.15); 
+            } else {
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(250, audioCtx.currentTime); 
+                gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.3); 
+            }
+        }
+
+        // HÀM NHẬP MÃ THỦ CÔNG
+        function manualEntry() {
+            let code = prompt("Vui lòng gõ mã sản phẩm vào đây (VD: SP-GHEGO-1):");
+            if(code && code.trim() !== "") {
+                onScanSuccess(code.trim(), null);
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            if (isProcessing) return; // Nếu đang xử lý mã trước đó thì bỏ qua
+            
+            document.getElementById('result').innerText = decodedText;
+            
+            // Logic Poka-Yoke (Kiểm tra đúng mã và phải ĐANG CÓ LỆNH)
+            if (decodedText === expectedCode && expectedCode !== "HẾT LỆNH") {
+                isProcessing = true;
+                playBeep(true); // Kêu BÍP
+                document.getElementById('body').classList.replace('bg-light', 'bg-success');
+                document.getElementById('result').className = "mb-0 fw-bold text-success";
+                
+                // Gọi API
+                fetch('/api/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item_code: decodedText })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === "success") {
+                        // Hiển thị Toast mượt mà bằng SweetAlert2
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Hoàn thành!',
+                            text: 'Đã cập nhật hệ thống',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.reload(); // Tải lại nhận lệnh mới
+                        });
+                    }
+                });
+            } else {
+                playBeep(false); // Kêu RÈ
+                
+                // Cảnh báo rung thiết bị (Haptic Feedback)
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+
+                document.getElementById('body').classList.replace('bg-light', 'bg-danger');
+                document.getElementById('result').className = "mb-0 fw-bold text-danger";
+                document.getElementById('result').innerText += " (SAI MÃ)";
+                
+                // Cảnh báo (SweetAlert)
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: 'Sai mã sản phẩm!',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+
+                // Reset màu nền sau 2s
+                setTimeout(() => {
+                    document.getElementById('body').classList.replace('bg-danger', 'bg-light');
+                    document.getElementById('result').className = "mb-0 text-secondary";
+                    document.getElementById('result').innerText = "Đang chờ quét...";
+                }, 2000);
+            }
+        }
+
+        // Khởi động Camera (Khung quét lớn 500x500 theo cấu hình của em)
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+            fps: 10, 
+            qrbox: { width: 500, height: 500 }, 
+            aspectRatio: 1.0 
+        }, false);
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+</html>
