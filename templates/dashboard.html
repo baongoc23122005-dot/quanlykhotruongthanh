@@ -5,39 +5,37 @@
     <title>Manager Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
+    <style>
         /* Font chữ hiện đại từ Google */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         
         body { 
             font-family: 'Inter', sans-serif;
-            /* Thay ảnh nền tại đây. Nếu dùng ảnh online thì dán link web vào url() */
             background: url('/static/congty.jpg') no-repeat center center fixed;
             background-size: cover;
         }
 
-        /* Lớp phủ (Overlay) làm dịu ảnh nền, giúp chữ không bị lóa */
+        /* Lớp phủ (Overlay) làm dịu ảnh nền */
         .bg-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(240, 242, 245, 0.7); /* Độ mờ 70% */
+            background-color: rgba(240, 242, 245, 0.7);
             z-index: -1;
         }
 
-        /* HIỆU ỨNG KÍNH MỜ (GLASSMORPHISM) CHO CÁC KHỐI CHỨC NĂNG */
+        /* HIỆU ỨNG KÍNH MỜ (GLASSMORPHISM) */
         .card {
-            background: rgba(255, 255, 255, 0.85) !important; /* Trắng trong suốt */
-            backdrop-filter: blur(12px); /* Làm mờ ảnh nền phía sau thẻ card */
+            background: rgba(255, 255, 255, 0.85) !important;
+            backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.6) !important;
-            border-radius: 16px !important; /* Bo góc tròn trịa hiện đại */
+            border-radius: 16px !important;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08) !important;
             transition: all 0.3s ease;
         }
         
-        /* Hiệu ứng nổi lên khi di chuột vào Card */
         .card:hover {
-            transform: translateY(-5px);
+            transform: translateY(-3px);
             box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15) !important;
         }
 
@@ -47,13 +45,12 @@
             border-bottom: 1px solid rgba(0,0,0,0.05);
         }
 
-        /* Tùy chỉnh thanh cuộn (Scrollbar) cho bảng dữ liệu mượt mà */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #adb5bd; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #6c757d; }
 
-        /* CSS Sơ đồ Heatmap (Được bo góc và làm mờ tương tự) */
+        /* CSS Sơ đồ Heatmap */
         .warehouse-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;}
         .zone { padding: 15px 10px; text-align: center; border-radius: 12px; font-weight: bold; border: 2px solid rgba(255,255,255,0.5); transition: 0.3s;}
         .heat-high { background-color: rgba(255, 77, 77, 0.9); color: white; border-color: #cc0000; }
@@ -62,15 +59,17 @@
         .heat-none { background-color: rgba(248, 249, 250, 0.6); color: #6c757d; }
     </style>
 </head>
-<body class="bg-light pb-5">
+<body class="pb-5">
     
+    <!-- Lớp phủ mờ nền -->
+    <div class="bg-overlay"></div>
+
     <!-- Navbar -->
     <nav class="navbar navbar-dark bg-dark mb-4 shadow">
         <div class="container-fluid">
-<span class="navbar-brand mb-0 h1 d-flex align-items-center">
-                <!-- Chèn logo công ty (Lưu file logo vào thư mục static) -->
-                <img src="/static/logo.png" alt="Logo" width="40" height="40" class="me-2 bg-white p-1">
-                WMS
+            <span class="navbar-brand mb-0 h1 d-flex align-items-center">
+                <img src="/static/logo.png" alt="Logo" width="40" height="40" class="me-2 bg-white p-1 rounded-circle">
+                WMS TRƯỜNG THÀNH
             </span>
             <div>
                 <a href="/export" class="btn btn-success btn-sm me-2">📥 Xuất file CSV</a>
@@ -85,16 +84,35 @@
             <!-- CỘT 1: GIAO VIỆC, HEATMAP & NHÂN SỰ -->
             <div class="col-md-4 mb-4">
                 
-                <!-- Giao việc -->
+                <!-- Giao việc chi tiết (Đã nâng cấp form) -->
                 <div class="card shadow mb-4">
-                    <div class="card-header bg-primary text-white fw-bold">📝 Tạo lệnh xuất/nhập</div>
+                    <div class="card-header bg-primary text-white fw-bold">📝 Tạo lệnh xuất/nhập chi tiết</div>
                     <div class="card-body">
                         <form method="POST">
-                            <label class="form-label">Mã NV (Worker ID):</label>
-                            <input type="number" name="worker_id" required value="1" class="form-control mb-2">
-                            <label class="form-label">Mã hàng hóa:</label>
-                            <input type="text" name="item_code" required placeholder="VD: SP-GHEGO-1" class="form-control mb-3">
-                            <button type="submit" class="btn btn-primary w-100">Gửi lệnh xuống PDA</button>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label small mb-1">Mã NV:</label>
+                                    <input type="number" name="worker_id" required value="1" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small mb-1">Loại lệnh:</label>
+                                    <select name="task_type" class="form-select form-select-sm">
+                                        <option value="Xuất">📦 Xuất kho</option>
+                                        <option value="Nhập">📥 Nhập kho</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small mb-1">Mã hàng hóa:</label>
+                                    <input type="text" name="item_code" required placeholder="VD: SP-GHEGO-1" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small mb-1">Số lượng cần quét:</label>
+                                    <input type="number" name="quantity" required value="1" min="1" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-12 mt-3">
+                                    <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">Gửi lệnh xuống PDA</button>
+                                </div>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -104,7 +122,6 @@
                     <div class="card-header bg-danger text-white fw-bold">🔥 Sơ đồ Kho (Heatmap)</div>
                     <div class="card-body">
                         <div class="warehouse-grid">
-                            <!-- Hiển thị 4 khu vực giả lập -->
                             {% set zones = ['Khu A', 'Khu B', 'Khu C', 'Khu D'] %}
                             {% for z in zones %}
                                 {% set qty = heatmap_data.get(z, 0) %}
@@ -125,7 +142,6 @@
                 <div class="card shadow">
                     <div class="card-header bg-secondary text-white fw-bold d-flex justify-content-between align-items-center">
                         <span>👥 Quản trị Nhân sự</span>
-                        <a href="/export/users" class="btn btn-sm btn-light text-dark" style="font-size: 0.7rem;">📥 Xuất</a>
                     </div>
                     <div class="card-body p-2">
                         <form method="POST" action="/admin/add_user" class="row g-1 mb-2 border-bottom pb-2">
@@ -142,7 +158,7 @@
                         <div style="max-height: 150px; overflow-y: auto;">
                             <ul class="list-group list-group-flush">
                                 {% for user in users %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center p-1">
+                                <li class="list-group-item d-flex justify-content-between align-items-center p-1 bg-transparent">
                                     <span class="small fw-bold">
                                         {{ user[1] }} ({{ user[2] }})
                                         {% if user[3] == 0 %}<del class="text-danger">Đã khóa</del>{% endif %}
@@ -168,14 +184,12 @@
                         <div class="card shadow mb-4 h-100">
                             <div class="card-header bg-warning fw-bold d-flex justify-content-between align-items-center">
                                 <span>📦 Danh mục Tồn Kho</span>
-                                <a href="/export/inventory" class="btn btn-sm btn-dark" style="font-size: 0.7rem;">📥 Xuất CSV</a>
                             </div>
                             <div class="card-body p-2">
                                 <form method="POST" action="/inventory/manage" class="row g-2 mb-3">
                                     <div class="col-3"><input type="text" name="item_code" class="form-control form-control-sm" required placeholder="Mã (SP-1)"></div>
                                     <div class="col-3"><input type="text" name="item_name" class="form-control form-control-sm" required placeholder="Tên SP"></div>
                                     <div class="col-2"><input type="number" name="quantity" class="form-control form-control-sm" required placeholder="SL"></div>
-                                    <!-- Thêm ô nhập vị trí -->
                                     <div class="col-2"><input type="text" name="location" class="form-control form-control-sm" required placeholder="Vị trí"></div>
                                     <div class="col-2"><button type="submit" class="btn btn-sm btn-warning w-100">Lưu</button></div>
                                 </form>
@@ -189,7 +203,6 @@
                                             <tr>
                                                 <td class="fw-bold">{{ inv[1] }}</td>
                                                 <td>{{ inv[2] }}</td>
-                                                <!-- Hiển thị cột vị trí -->
                                                 <td><small class="text-muted">{{ inv[4] }}</small></td>
                                                 <td><span class="badge bg-info text-dark fs-6">{{ inv[3] }}</span></td>
                                             </tr>
@@ -214,13 +227,13 @@
                     </div>
                 </div>
 
-                <!-- Bảng Lịch sử -->
+                <!-- Bảng Lịch sử Lệnh công việc (Đã thêm cột Loại Lệnh và Số lượng) -->
                 <div class="card shadow">
                     <div class="card-header bg-white fw-bold">📜 Lịch sử Lệnh công việc</div>
                     <div class="card-body p-0">
-                        <table class="table table-striped table-hover mb-0">
+                        <table class="table table-striped table-hover mb-0 text-center">
                             <thead class="table-dark">
-                                <tr><th>ID</th><th>Mã NV</th><th>Mã Hàng</th><th>Trạng thái</th></tr>
+                                <tr><th>ID</th><th>Mã NV</th><th>Mã Hàng</th><th>Loại</th><th>Tiến độ quét</th><th>Trạng thái</th></tr>
                             </thead>
                             <tbody>
                                 {% for task in tasks %}
@@ -229,7 +242,15 @@
                                     <td>Worker {{ task[1] }}</td>
                                     <td class="fw-bold text-primary">{{ task[2] }}</td>
                                     <td>
-                                        {% if task[3] == 'Completed' %}
+                                        {% if task[5] == 'Xuất' %}
+                                        <span class="badge bg-danger">Xuất</span>
+                                        {% else %}
+                                        <span class="badge bg-success">Nhập</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="fw-bold">{{ task[4] }}</span> / {{ task[3] }}</td>
+                                    <td>
+                                        {% if task[6] == 'Completed' %}
                                         <span class="badge bg-success">Đã xong</span>
                                         {% else %}
                                         <span class="badge bg-warning text-dark">Chờ xử lý</span>
@@ -259,7 +280,7 @@
             }
         });
 
-        // CƠ CHẾ AUTO-RELOAD THÔNG MINH (CHỐNG MẤT DỮ LIỆU KHI ĐANG GÕ)
+        // CƠ CHẾ AUTO-RELOAD THÔNG MINH
         setInterval(function() {
             let isTyping = false;
             
@@ -271,7 +292,6 @@
             const inputs = document.querySelectorAll('input:not([type="submit"]):not([type="hidden"])');
             inputs.forEach(input => {
                 if (input.name === 'worker_id') return;
-                
                 if (input.value.trim() !== '') {
                     isTyping = true;
                 }
