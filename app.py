@@ -248,7 +248,7 @@ def export_csv():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment;filename=Lich_Su_Cong_Viec.csv"}
     )
-
+init_db()
 if __name__ == '__main__':
-    init_db()
+
     app.run(host='0.0.0.0', port=5000, debug=True)
