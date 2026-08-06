@@ -20,22 +20,37 @@
     
     <nav class="navbar navbar-primary bg-primary mb-3">
         <div class="container-fluid justify-content-center">
-            <span class="navbar-brand text-white fw-bold mb-0">HỆ THỐNG PDA</span>
+            <span class="navbar-brand text-white fw-bold mb-0">HỆ THỐNG PDA - CÔNG NHÂN</span>
         </div>
     </nav>
 
     <div class="container">
-        <!-- CHỈ DẪN VỊ TRÍ & NHIỆM VỤ -->
-        <div class="alert alert-warning text-center shadow-sm p-2 mb-3" role="alert">
-            <h6 class="text-danger fw-bold mb-1">📍 TỚI: {{ task.location }}</h6>
-            <h3 class="text-primary fw-bold mb-0" id="expectedCode">{{ task.code }}</h3>
-            <small class="text-muted">{{ task.name }}</small>
+        <!-- CHỈ DẪN VỊ TRÍ & NHIỆM VỤ CHI TIẾT -->
+        <div class="alert alert-warning text-center shadow-sm p-3 mb-3" role="alert">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-danger fs-6">📍 Vị trí: {{ task.location }}</span>
+                <span class="badge bg-dark fs-6">Loại: {{ task.task_type }}</span>
+            </div>
+            <h3 class="text-primary fw-bold mb-1" id="expectedCode">{{ task.code }}</h3>
+            <h5 class="text-secondary mb-2">{{ task.name }}</h5>
+            
+            <!-- THANH TIẾN TRÌNH QUÉT CỘNG DỒN -->
+            <div class="mt-2">
+                <div class="d-flex justify-content-between small fw-bold text-muted mb-1">
+                    <span>Tiến độ quét:</span>
+                    <span id="progressText">{{ task.scanned_qty }} / {{ task.quantity }}</span>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    {% set percent = (task.scanned_qty / task.quantity * 100) if task.quantity > 0 else 0 %}
+                    <div id="progressBar" class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ percent }}%;"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Camera Scanner -->
         <div id="reader" class="bg-white mb-2"></div>
         
-        <!-- NÚT NHẬP TAY (MANUAL ENTRY) -->
+        <!-- NÚT NHẬP TAY THỦ CÔNG -->
         <button onclick="manualEntry()" class="btn btn-outline-secondary w-100 fw-bold mb-3 shadow-sm">
             ⌨️ Mã hỏng? Nhập thủ công
         </button>
@@ -65,7 +80,7 @@
 
     <script>
         const expectedCode = document.getElementById("expectedCode").innerText;
-        let isProcessing = false; // Chống quét liên tục (spam)
+        let isProcessing = false; 
 
         // Web Audio API: Hàm tạo âm thanh
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -91,27 +106,24 @@
             }
         }
 
-        // HÀM NHẬP MÃ THỦ CÔNG
         function manualEntry() {
-            let code = prompt("Vui lòng gõ mã sản phẩm vào đây (VD: SP-GHEGO-1):");
+            let code = prompt("Vui lòng gõ mã sản phẩm vào đây:");
             if(code && code.trim() !== "") {
                 onScanSuccess(code.trim(), null);
             }
         }
 
         function onScanSuccess(decodedText, decodedResult) {
-            if (isProcessing) return; // Nếu đang xử lý mã trước đó thì bỏ qua
+            if (isProcessing) return; 
             
             document.getElementById('result').innerText = decodedText;
             
-            // Logic Poka-Yoke (Kiểm tra đúng mã và phải ĐANG CÓ LỆNH)
             if (decodedText === expectedCode && expectedCode !== "HẾT LỆNH") {
                 isProcessing = true;
-                playBeep(true); // Kêu BÍP
+                playBeep(true); 
                 document.getElementById('body').classList.replace('bg-light', 'bg-success');
                 document.getElementById('result').className = "mb-0 fw-bold text-success";
                 
-                // Gọi API
                 fetch('/api/confirm', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -120,51 +132,48 @@
                 .then(response => response.json())
                 .then(data => {
                     if(data.status === "success") {
-                        // Hiển thị Toast mượt mà bằng SweetAlert2
                         Swal.fire({
                             icon: 'success',
-                            title: 'Hoàn thành!',
-                            text: 'Đã cập nhật hệ thống',
-                            timer: 1500,
+                            title: 'Thành công!',
+                            text: data.message,
+                            timer: 1200,
                             showConfirmButton: false
                         }).then(() => {
-                            window.location.reload(); // Tải lại nhận lệnh mới
+                            window.location.reload(); 
                         });
+                    } else {
+                        isProcessing = false;
                     }
                 });
             } else {
-                playBeep(false); // Kêu RÈ
-                
-                // Cảnh báo rung thiết bị (Haptic Feedback)
+                playBeep(false); 
                 if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 
                 document.getElementById('body').classList.replace('bg-light', 'bg-danger');
                 document.getElementById('result').className = "mb-0 fw-bold text-danger";
                 document.getElementById('result').innerText += " (SAI MÃ)";
                 
-                // Cảnh báo (SweetAlert)
                 Swal.fire({
                     toast: true,
                     position: 'top-end',
                     icon: 'error',
-                    title: 'Sai mã sản phẩm!',
+                    title: 'Sai mã sản phẩm cần quét!',
                     showConfirmButton: false,
                     timer: 2000
                 });
 
-                // Reset màu nền sau 2s
                 setTimeout(() => {
                     document.getElementById('body').classList.replace('bg-danger', 'bg-light');
                     document.getElementById('result').className = "mb-0 text-secondary";
                     document.getElementById('result').innerText = "Đang chờ quét...";
+                    isProcessing = false;
                 }, 2000);
             }
         }
 
-        // Khởi động Camera (Khung quét lớn 500x500 theo cấu hình của em)
         let html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
             fps: 10, 
-            qrbox: { width: 500, height: 500 }, 
+            qrbox: { width: 400, height: 400 }, 
             aspectRatio: 1.0 
         }, false);
         html5QrcodeScanner.render(onScanSuccess);
