@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PDA Scanner</title>
-    <!-- Bootstrap 5 -->
+    <title>PDA Scanner - Số hóa 100%</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- SweetAlert2 cho Toast Notification -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- HTML5 QRCode -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { transition: background-color 0.3s; }
         #reader { width: 100%; border: none !important; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        #reader video { object-fit: cover; }
+        .step-box { border: 2px dashed #ccc; border-radius: 8px; padding: 10px; transition: 0.3s; }
+        .step-active { border-color: #0d6efd; background-color: #e9f2ff; }
+        .step-done { border-color: #198754; background-color: #d1e7dd; opacity: 0.7; }
     </style>
 </head>
 <body id="body" class="bg-light pb-5">
@@ -25,24 +24,40 @@
     </nav>
 
     <div class="container">
-        <!-- CHỈ DẪN VỊ TRÍ & NHIỆM VỤ CHI TIẾT -->
-        <div class="alert alert-warning text-center shadow-sm p-3 mb-3" role="alert">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="badge bg-danger fs-6">📍 Vị trí: {{ task.location }}</span>
-                <span class="badge bg-dark fs-6">Loại: {{ task.task_type }}</span>
-            </div>
-            <h3 class="text-primary fw-bold mb-1" id="expectedCode">{{ task.code }}</h3>
-            <h5 class="text-secondary mb-2">{{ task.name }}</h5>
-            
-            <!-- THANH TIẾN TRÌNH QUÉT CỘNG DỒN -->
-            <div class="mt-2">
-                <div class="d-flex justify-content-between small fw-bold text-muted mb-1">
-                    <span>Tiến độ quét:</span>
-                    <span id="progressText">{{ task.scanned_qty }} / {{ task.quantity }}</span>
+        <!-- TIẾN ĐỘ TỔNG -->
+        <div class="d-flex justify-content-between small fw-bold text-muted mb-1">
+            <span>Tiến độ Lệnh:</span>
+            <span>{{ task.scanned_qty }} / {{ task.quantity }}</span>
+        </div>
+        <div class="progress mb-3" style="height: 10px;">
+            {% set percent = (task.scanned_qty / task.quantity * 100) if task.quantity > 0 else 0 %}
+            <div class="progress-bar bg-success progress-bar-striped progress-bar-animated" style="width: {{ percent }}%;"></div>
+        </div>
+
+        <!-- YÊU CẦU QUÉT 2 BƯỚC (SỐ HÓA) -->
+        <div class="card shadow-sm mb-3 border-0">
+            <div class="card-body p-2">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-dark">Lệnh: {{ task.task_type }}</span>
+                    {% if task.code == "HẾT LỆNH" %}
+                        <span class="badge bg-secondary">Hoàn tất</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">Đang thực hiện</span>
+                    {% endif %}
                 </div>
-                <div class="progress" style="height: 10px;">
-                    {% set percent = (task.scanned_qty / task.quantity * 100) if task.quantity > 0 else 0 %}
-                    <div id="progressBar" class="progress-bar bg-success progress-bar-striped progress-bar-animated" role="progressbar" style="width: {{ percent }}%;"></div>
+
+                <!-- Box Bước 1: Quét Vị Trí -->
+                <div id="step1Box" class="step-box step-active mb-2 text-center">
+                    <span class="badge bg-primary mb-1">BƯỚC 1: QUÉT TỌA ĐỘ</span>
+                    <h5 class="fw-bold text-primary mb-0" id="expectedLocation">{{ task.location }}</h5>
+                    <small class="text-muted">Hãy đi đến kệ này và quét mã QR dán trên kệ</small>
+                </div>
+
+                <!-- Box Bước 2: Quét Sản Phẩm -->
+                <div id="step2Box" class="step-box text-center">
+                    <span class="badge bg-secondary mb-1" id="step2Badge">BƯỚC 2: QUÉT SẢN PHẨM</span>
+                    <h4 class="fw-bold text-secondary mb-0" id="expectedItem">{{ task.code }}</h4>
+                    <small class="text-muted">{{ task.name }}</small>
                 </div>
             </div>
         </div>
@@ -50,7 +65,6 @@
         <!-- Camera Scanner -->
         <div id="reader" class="bg-white mb-2"></div>
         
-        <!-- NÚT NHẬP TAY THỦ CÔNG -->
         <button onclick="manualEntry()" class="btn btn-outline-secondary w-100 fw-bold mb-3 shadow-sm">
             ⌨️ Mã hỏng? Nhập thủ công
         </button>
@@ -58,124 +72,121 @@
         <!-- Kết quả quét -->
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-body text-center p-2">
-                <h6 class="text-muted mb-2">Trạng thái mã quét:</h6>
-                <h5 id="result" class="mb-0 text-secondary">Đang chờ quét...</h5>
+                <h5 id="result" class="mb-0 text-secondary">Đang chờ quét TỌA ĐỘ...</h5>
             </div>
-        </div>
-
-        <!-- LỊCH SỬ CÁ NHÂN -->
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white text-muted fw-bold py-1" style="font-size: 0.8rem;">
-                🕰️ Lịch sử vừa hoàn thành
-            </div>
-            <ul class="list-group list-group-flush" style="font-size: 0.85rem;">
-                {% for h in history_tasks %}
-                <li class="list-group-item text-success fw-bold">✓ {{ h }}</li>
-                {% else %}
-                <li class="list-group-item text-muted">Chưa có lịch sử</li>
-                {% endfor %}
-            </ul>
         </div>
     </div>
 
     <script>
-        const expectedCode = document.getElementById("expectedCode").innerText;
+        const expectedLoc = document.getElementById("expectedLocation").innerText;
+        const expectedItem = document.getElementById("expectedItem").innerText;
+        
+        // Trạng thái quét: 1 = Đang chờ quét Vị trí | 2 = Đang chờ quét Hàng
+        let currentStep = (expectedLoc !== "Chờ lệnh mới" && expectedLoc !== "KHO ĐẦY" && expectedLoc !== "KHÔNG TÌM THẤY" && expectedItem !== "HẾT LỆNH") ? 1 : 0;
         let isProcessing = false; 
 
-        // Web Audio API: Hàm tạo âm thanh
+        if(currentStep === 0) {
+            document.getElementById("step1Box").className = "step-box step-done mb-2 text-center";
+            document.getElementById("result").innerText = "KHÔNG CÓ LỆNH HOẶC LỖI KHO";
+        }
+
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playBeep(isSuccess) {
             if (!audioCtx) return;
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
+            oscillator.connect(gainNode); gainNode.connect(audioCtx.destination);
             
             if (isSuccess) {
                 oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); 
+                oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime); 
                 gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.15); 
+                oscillator.start(); oscillator.stop(audioCtx.currentTime + 0.1); 
             } else {
                 oscillator.type = 'sawtooth';
                 oscillator.frequency.setValueAtTime(250, audioCtx.currentTime); 
                 gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.3); 
+                oscillator.start(); oscillator.stop(audioCtx.currentTime + 0.3); 
             }
         }
 
         function manualEntry() {
-            let code = prompt("Vui lòng gõ mã sản phẩm vào đây:");
-            if(code && code.trim() !== "") {
-                onScanSuccess(code.trim(), null);
-            }
+            let promptText = currentStep === 1 ? "Nhập mã TỌA ĐỘ KỆ:" : "Nhập mã SẢN PHẨM:";
+            let code = prompt(promptText);
+            if(code && code.trim() !== "") onScanSuccess(code.trim());
         }
 
-        function onScanSuccess(decodedText, decodedResult) {
-            if (isProcessing) return; 
+        function triggerError(msg) {
+            playBeep(false); 
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            document.getElementById('body').classList.replace('bg-light', 'bg-danger');
+            document.getElementById('result').className = "mb-0 fw-bold text-white";
+            document.getElementById('result').innerText = msg;
             
+            setTimeout(() => {
+                document.getElementById('body').classList.replace('bg-danger', 'bg-light');
+                document.getElementById('result').className = "mb-0 text-primary fw-bold";
+                document.getElementById('result').innerText = currentStep === 1 ? "Đang chờ quét TỌA ĐỘ..." : "Đang chờ quét SẢN PHẨM...";
+                isProcessing = false;
+            }, 1500);
+        }
+
+        function onScanSuccess(decodedText) {
+            if (isProcessing || currentStep === 0) return; 
+            isProcessing = true;
             document.getElementById('result').innerText = decodedText;
             
-            if (decodedText === expectedCode && expectedCode !== "HẾT LỆNH") {
-                isProcessing = true;
-                playBeep(true); 
-                document.getElementById('body').classList.replace('bg-light', 'bg-success');
-                document.getElementById('result').className = "mb-0 fw-bold text-success";
-                
-                fetch('/api/confirm', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ item_code: decodedText })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if(data.status === "success") {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Thành công!',
-                            text: data.message,
-                            timer: 1200,
-                            showConfirmButton: false
-                        }).then(() => {
-                            window.location.reload(); 
-                        });
-                    } else {
-                        isProcessing = false;
-                    }
-                });
-            } else {
-                playBeep(false); 
-                if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-
-                document.getElementById('body').classList.replace('bg-light', 'bg-danger');
-                document.getElementById('result').className = "mb-0 fw-bold text-danger";
-                document.getElementById('result').innerText += " (SAI MÃ)";
-                
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'error',
-                    title: 'Sai mã sản phẩm cần quét!',
-                    showConfirmButton: false,
-                    timer: 2000
-                });
-
-                setTimeout(() => {
-                    document.getElementById('body').classList.replace('bg-danger', 'bg-light');
-                    document.getElementById('result').className = "mb-0 text-secondary";
-                    document.getElementById('result').innerText = "Đang chờ quét...";
-                    isProcessing = false;
-                }, 2000);
+            if (currentStep === 1) {
+                // XỬ LÝ BƯỚC 1: QUÉT TỌA ĐỘ
+                if (decodedText === expectedLoc) {
+                    playBeep(true);
+                    // Cập nhật UI chuyển sang bước 2
+                    document.getElementById("step1Box").className = "step-box step-done mb-2 text-center";
+                    document.getElementById("step2Box").className = "step-box step-active text-center";
+                    document.getElementById("step2Badge").className = "badge bg-primary mb-1";
+                    document.getElementById("step2Badge").innerText = "BƯỚC 2: QUÉT SẢN PHẨM (ĐANG CHỜ)";
+                    document.getElementById("expectedItem").className = "fw-bold text-primary mb-0";
+                    
+                    document.getElementById('result').className = "mb-0 text-success fw-bold";
+                    document.getElementById('result').innerText = "Vị trí ĐÚNG! Vui lòng quét SẢN PHẨM.";
+                    
+                    currentStep = 2; // Chuyển trạng thái
+                    setTimeout(() => { isProcessing = false; }, 1000);
+                } else {
+                    triggerError("SAI VỊ TRÍ KỆ KHO!");
+                }
+            } 
+            else if (currentStep === 2) {
+                // XỬ LÝ BƯỚC 2: QUÉT SẢN PHẨM
+                if (decodedText === expectedItem) {
+                    playBeep(true);
+                    document.getElementById('body').classList.replace('bg-light', 'bg-success');
+                    document.getElementById('result').className = "mb-0 fw-bold text-white";
+                    document.getElementById('result').innerText = "Khớp Dữ Liệu! Đang đồng bộ...";
+                    
+fetch('/api/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item_code: decodedText, slot_code: expectedLoc }) // ĐÃ GỬI KÈM MÃ TỌA ĐỘ
+})
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.status === "success") {
+                            Swal.fire({
+                                icon: 'success', title: 'Hoàn tất 1 món!', text: data.message,
+                                timer: 1200, showConfirmButton: false
+                            }).then(() => { window.location.reload(); });
+                        } else {
+                            triggerError("Lỗi hệ thống khi cập nhật!");
+                        }
+                    });
+                } else {
+                    triggerError("SAI MÃ SẢN PHẨM!");
+                }
             }
         }
 
-        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-            fps: 10, 
-            qrbox: { width: 400, height: 400 }, 
-            aspectRatio: 1.0 
-        }, false);
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 350, height: 350 }, aspectRatio: 1.0 }, false);
         html5QrcodeScanner.render(onScanSuccess);
     </script>
 </body>
