@@ -266,23 +266,6 @@
             document.getElementById('qrImageContainer').innerHTML = '<img src="' + qrUrl + '" class="img-fluid rounded shadow-sm border p-1">';
             new bootstrap.Modal(document.getElementById('qrModal')).show();
         }
-
-        setInterval(function() {
-            let isTyping = false;
-            if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') { isTyping = true; }
-            document.querySelectorAll('input:not([type="submit"])').forEach(input => {
-                if (input.name !== 'worker_id' && input.value.trim() !== '') { isTyping = true; }
-            });
-            if (!isTyping) { window.location.reload(); }
-        }, 5000); 
-    </script>
-</body>
-</html>
-                }]
-            }
-        });
-
-        // CƠ CHẾ AUTO-RELOAD THÔNG MINH
         setInterval(function() {
             let isTyping = false;
             
