@@ -13,36 +13,46 @@ def init_db():
     conn = sqlite3.connect('warehouse.db')
     c = conn.cursor()
     
-    # 1. XÓA BỎ CÁC BẢNG CŨ (NẾU CÓ) ĐỂ TRÁNH LỖI XUNG ĐỘT
-    c.execute("DROP TABLE IF EXISTS Users")
-    c.execute("DROP TABLE IF EXISTS Tasks")
-    c.execute("DROP TABLE IF EXISTS Inventory")
+    # Tạo bảng Users nếu chưa tồn tại
+    c.execute('''CREATE TABLE IF NOT EXISTS Users (
+                    id INTEGER PRIMARY KEY, 
+                    username TEXT UNIQUE, 
+                    password TEXT, 
+                    role TEXT, 
+                    is_active INTEGER DEFAULT 1
+                )''')
+                
+    c.execute('''CREATE TABLE IF NOT EXISTS Tasks (
+                    id INTEGER PRIMARY KEY, 
+                    worker_id INTEGER, 
+                    item_code TEXT, 
+                    status TEXT
+                )''')
+                
+    c.execute('''CREATE TABLE IF NOT EXISTS Inventory (
+                    id INTEGER PRIMARY KEY, 
+                    item_code TEXT UNIQUE, 
+                    item_name TEXT, 
+                    quantity INTEGER, 
+                    location TEXT
+                )''')
     
-    # 2. TẠO LẠI CÁC BẢNG VỚI CẤU TRÚC MỚI NHẤT
-    c.execute('''CREATE TABLE Users (id INTEGER PRIMARY KEY, username TEXT UNIQUE, password TEXT, role TEXT, is_active INTEGER DEFAULT 1)''')
-    c.execute('''CREATE TABLE Tasks (id INTEGER PRIMARY KEY, worker_id INTEGER, item_code TEXT, status TEXT)''')
+    # Kiểm tra xem đã có tài khoản nào chưa, nếu chưa thì thêm dữ liệu mẫu vào
+    c.execute("SELECT COUNT(*) FROM Users")
+    count = c.fetchone()[0]
     
-    # [CẬP NHẬT]: Thêm cột location (Vị trí) vào bảng Inventory
-    c.execute('''CREATE TABLE Inventory (id INTEGER PRIMARY KEY, item_code TEXT UNIQUE, item_name TEXT, quantity INTEGER, location TEXT)''')
-    
-    try:
-        # Dữ liệu mẫu User
-        c.execute("INSERT INTO Users (username, password, role, is_active) VALUES ('congnhan1', '123456', 'Worker', 1)")
-        c.execute("INSERT INTO Users (username, password, role, is_active) VALUES ('quanly1', '123456', 'Manager', 1)")
-        
-        # Dữ liệu mẫu Tasks
-        c.execute("INSERT INTO Tasks (worker_id, item_code, status) VALUES (1, 'SP-GHEGO-1', 'Pending')")
-        
-        # [CẬP NHẬT]: Dữ liệu mẫu Inventory có kèm vị trí lưu trữ
-        c.execute("INSERT INTO Inventory (item_code, item_name, quantity, location) VALUES ('SP-GHEGO-1', 'Ghế Gỗ Cao Cấp', 50, 'Khu A - Kệ 01')")
-        c.execute("INSERT INTO Inventory (item_code, item_name, quantity, location) VALUES ('SP-GHEGO-2', 'Ghế Xoay', 30, 'Khu B - Kệ 03')")
-        c.execute("INSERT INTO Inventory (item_code, item_name, quantity, location) VALUES ('SP-BAN-1', 'Bàn Làm Việc', 10, 'Khu C - Kệ 02')")
-    except sqlite3.IntegrityError:
-        pass 
+    if count == 0:
+        try:
+            c.execute("INSERT INTO Users (username, password, role, is_active) VALUES ('congnhan1', '123456', 'Worker', 1)")
+            c.execute("INSERT INTO Users (username, password, role, is_active) VALUES ('quanly1', '123456', 'Manager', 1)")
+            c.execute("INSERT INTO Tasks (worker_id, item_code, status) VALUES (1, 'SP-GHEGO-1', 'Pending')")
+            c.execute("INSERT INTO Inventory (item_code, item_name, quantity, location) VALUES ('SP-GHEGO-1', 'Ghế Gỗ Cao Cấp', 50, 'Khu A - Kệ 01')")
+            c.execute("INSERT INTO Inventory (item_code, item_name, quantity, location) VALUES ('SP-GHEGO-2', 'Ghế Xoay', 30, 'Khu B - Kệ 03')")
+        except sqlite3.IntegrityError:
+            pass 
         
     conn.commit()
     conn.close()
-
 # ==========================================
 # 2. ROUTING & ĐIỀU HƯỚNG
 # ==========================================
