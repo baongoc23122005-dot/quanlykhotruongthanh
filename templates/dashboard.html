@@ -246,8 +246,8 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
         const ctx = document.getElementById('progressChart');
         let completed = {{ completed }};
         let pending = {{ pending }};
@@ -289,11 +289,15 @@
             new bootstrap.Modal(document.getElementById('qrModal')).show();
         }
 
-        // CƠ CHẾ AUTO-RELOAD ĐÃ ĐƯỢC SỬA LỖI
+        // CƠ CHẾ AUTO-RELOAD TỐI ƯU TOÀN DIỆN
         setInterval(function() {
-            // Chỉ chặn auto-reload nếu người dùng ĐANG CLICK CHUỘT (focus) vào ô nhập liệu
             const activeTag = document.activeElement.tagName;
-            if (activeTag !== 'INPUT' && activeTag !== 'SELECT') {
+            
+            // Kiểm tra xem Popup QR có đang mở hay không (Bootstrap sẽ thêm class 'show' khi Modal hiển thị)
+            const isModalOpen = document.getElementById('qrModal').classList.contains('show');
+
+            // Chỉ reload trang nếu: KHÔNG click vào ô nhập liệu VÀ KHÔNG mở mã QR
+            if (activeTag !== 'INPUT' && activeTag !== 'SELECT' && !isModalOpen) {
                 window.location.reload();
             }
         }, 5000); 
