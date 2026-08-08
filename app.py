@@ -1,11 +1,11 @@
-from flask import Flask, render_template, request, redirect, jsonify, Response
+from flask import Flask, render_template, request, redirect, jsonify, Response, flash
 import sqlite3
 import csv
 from io import StringIO
 import datetime
 
 app = Flask(__name__)
-app.secret_key = 'he_thong_kho_demo'
+app.secret_key = 'he_thong_kho_demo_super_secret_key' # Bắt buộc phải có secret_key để dùng flash
 
 def init_db():
     conn = sqlite3.connect('warehouse.db')
@@ -87,15 +87,50 @@ def dashboard():
         item_code = request.form['item_code']
         quantity = int(request.form['quantity'])
         task_type = request.form['task_type'] 
-        now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
+        # LOGIC 1: Chặn Số lượng <= 0
+        if quantity <= 0:
+            flash("Lỗi: Số lượng yêu cầu phải lớn hơn 0!", "danger")
+            conn.close()
+            return redirect('/dashboard')
+
+        # LOGIC 2: Kiểm tra hàng đã khai báo chưa
+        c.execute("SELECT quantity FROM Inventory WHERE item_code = ?", (item_code,))
+        inv_item = c.fetchone()
+        
+        if not inv_item:
+            flash(f"Lỗi: Mã hàng '{item_code}' chưa được khai báo! Hãy thêm ở mục Tồn Kho trước.", "danger")
+            conn.close()
+            return redirect('/dashboard')
+            
+        current_stock = inv_item[0]
+        
+        # LOGIC 3: Xuất lố số tồn
+        if task_type == 'Xuất' and quantity > current_stock:
+            flash(f"Lỗi thiếu hàng: Không thể xuất {quantity} cái. Kho hiện chỉ còn {current_stock} cái '{item_code}'.", "warning")
+            conn.close()
+            return redirect('/dashboard')
+            
+        # LOGIC 4: Nhập lố chỗ trống của kho
+        if task_type == 'Nhập':
+            c.execute("SELECT COUNT(*) FROM WarehouseMap WHERE item_code IS NULL")
+            empty_slots = c.fetchone()[0]
+            if quantity > empty_slots:
+                flash(f"Lỗi sức chứa: Kho hiện tại chỉ còn {empty_slots} vị trí trống. Không thể chứa thêm {quantity} sản phẩm!", "warning")
+                conn.close()
+                return redirect('/dashboard')
+
+        # Đã qua hết các vòng kiểm tra an toàn -> Tạo Lệnh
+        now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         c.execute("""
             INSERT INTO Tasks (worker_id, item_code, quantity, scanned_qty, task_type, target_slot, status, created_at) 
             VALUES (?, ?, ?, 0, ?, 'Tự động phân bổ', 'Pending', ?)
         """, (worker_id, item_code, quantity, task_type, now_str))
         conn.commit()
+        flash(f"Thành công: Đã gửi lệnh {task_type} {quantity} sản phẩm '{item_code}' xuống PDA!", "success")
         return redirect('/dashboard')
 
+    # Code hiển thị Dashboard phía dưới giữ nguyên
     c.execute("SELECT status, COUNT(*) FROM Tasks GROUP BY status")
     stats = dict(c.fetchall())
     completed, pending = stats.get('Completed', 0), stats.get('Pending', 0)
@@ -119,7 +154,6 @@ def dashboard():
     c.execute("SELECT id, item_code, item_name, quantity FROM Inventory ORDER BY id DESC")
     inventories = c.fetchall()
 
-    # THỐNG KÊ SỐ LƯỢNG HÀNG TRONG TỪNG KHU VỰC
     c.execute("SELECT zone, COUNT(item_code) FROM WarehouseMap WHERE item_code IS NOT NULL GROUP BY zone")
     zone_stats = dict(c.fetchall())
     for z in ['A', 'B', 'C', 'D']:
@@ -137,6 +171,8 @@ def dashboard():
 
     conn.close()
     return render_template('dashboard.html', completed=completed, pending=pending, tasks=tasks, users=users, inventories=inventories, map_data=map_data, zone_stats=zone_stats)
+
+# ... (Toàn bộ các hàm scanner, api_confirm, reset, manage_inventory, export, ... giữ nguyên như file cũ của em) ...
 
 @app.route('/scanner')
 def scanner():
