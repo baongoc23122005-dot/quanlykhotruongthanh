@@ -296,15 +296,21 @@
             new bootstrap.Modal(document.getElementById('qrModal')).show();
         }
 
-        // CƠ CHẾ AUTO-RELOAD TỐI ƯU TOÀN DIỆN
+        // CƠ CHẾ AUTO-RELOAD TỐI ƯU TOÀN DIỆN NHẤT
         setInterval(function() {
             const activeTag = document.activeElement.tagName;
             
-            // Kiểm tra xem Popup QR có đang mở hay không (Bootstrap sẽ thêm class 'show' khi Modal hiển thị)
+            // 1. Kiểm tra xem Popup QR có đang mở hay không
             const isModalOpen = document.getElementById('qrModal').classList.contains('show');
 
-            // Chỉ reload trang nếu: KHÔNG click vào ô nhập liệu VÀ KHÔNG mở mã QR
-            if (activeTag !== 'INPUT' && activeTag !== 'SELECT' && !isModalOpen) {
+            // 2. Kiểm tra xem có thông báo lỗi/thành công nào đang hiện không (class .alert)
+            const hasAlertMessage = document.querySelector('.alert') !== null;
+
+            // 3. Chỉ reload trang nếu đáp ứng ĐỦ 3 ĐIỀU KIỆN: 
+            // - Không gõ chữ
+            // - Không mở mã QR
+            // - KHÔNG CÓ thông báo nào trên màn hình (Đã bị người dùng bấm X đóng lại)
+            if (activeTag !== 'INPUT' && activeTag !== 'SELECT' && !isModalOpen && !hasAlertMessage) {
                 window.location.reload();
             }
         }, 5000); 
