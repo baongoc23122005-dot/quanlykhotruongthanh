@@ -31,7 +31,6 @@
 <body class="pb-5">
     <div class="bg-overlay"></div>
 
-    <!-- NAVBAR FULL TÍNH NĂNG NHƯ CŨ -->
     <nav class="navbar navbar-dark bg-dark mb-4 shadow">
         <div class="container-fluid">
             <span class="navbar-brand mb-0 h1 d-flex align-items-center">
@@ -49,17 +48,29 @@
     <div class="container-fluid px-4">
         <div class="row">
             
-            <!-- CỘT TRÁI: COMMAND CENTER (Giao việc, Biểu đồ, Quản lý User) -->
             <div class="col-lg-3 mb-4">
                 
                 <div class="card shadow mb-4">
                     <div class="card-header bg-primary text-white fw-bold">📝 Tạo lệnh xuất/nhập</div>
                     <div class="card-body">
+                        
+                        <!-- CHỖ NÀY ĐỂ HIỂN THỊ CÁC CẢNH BÁO LỖI (FLASH MESSAGES) -->
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                          {% if messages %}
+                            {% for category, message in messages %}
+                              <div class="alert alert-{{ category }} alert-dismissible fade show py-2" role="alert">
+                                <strong>{{ message }}</strong>
+                                <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+                              </div>
+                            {% endfor %}
+                          {% endif %}
+                        {% endwith %}
+
                         <form method="POST">
                             <div class="row g-2">
                                 <div class="col-6">
-    <input type="text" name="worker_id" value="Cont-322" class="form-control form-control-sm" title="Mã Lệnh / Cont">
-</div>
+                                    <input type="text" name="worker_id" value="Cont-322" class="form-control form-control-sm" title="Mã Lệnh / Cont">
+                                </div>
                                 <div class="col-6">
                                     <select name="task_type" class="form-select form-select-sm">
                                         <option value="Xuất">Xuất Kho</option>
@@ -117,7 +128,6 @@
 
             </div>
 
-            <!-- CỘT PHẢI: MONITORING (Bản đồ, Tồn Kho, Lịch Sử) -->
             <div class="col-lg-9 mb-4">
                 
                 <div class="card shadow mb-4">
@@ -126,7 +136,6 @@
                         <div class="map-container">
                             {% for zone, rows in map_data.items() %}
                             <div class="zone-card shadow-sm">
-                                <!-- Đã thêm đếm số lượng vị trí đang dùng (VD: 5/40) -->
                                 <div class="zone-title d-flex justify-content-between align-items-center">
                                     <span>Khu {{ zone }}</span>
                                     <span class="badge bg-light text-dark fs-6">{{ zone_stats.get(zone, 0) }} / 40</span>
@@ -160,7 +169,6 @@
                 </div>
 
                 <div class="row">
-                    <!-- Bảng Tồn Kho -->
                     <div class="col-md-6 mb-4">
                         <div class="card shadow h-100">
                             <div class="card-header bg-warning fw-bold">📦 Tồn kho & Cảnh báo</div>
@@ -201,7 +209,6 @@
                         </div>
                     </div>
 
-                    <!-- Bảng Lịch sử -->
                     <div class="col-md-6 mb-4">
                         <div class="card shadow h-100">
                             <div class="card-header bg-white fw-bold">📜 Lịch sử Lệnh công việc</div>
